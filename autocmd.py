@@ -1,14 +1,110 @@
 #!/usr/bin/env python3
-import sys, os, subprocess, readline, re, getpass
+import sys, os, subprocess, readline, re, getpass, shutil
 from pathlib import Path
 from anthropic import Anthropic
+
+def get_config_dir():
+    """Get the config directory path"""
+    return Path.home() / ".config" / "autocmd"
+
+def is_shell_setup():
+    """Check if shell integration is already set up"""
+    config_dir = get_config_dir()
+    setup_marker = config_dir / ".shell_setup_done"
+    return setup_marker.exists()
+
+def detect_shell():
+    """Detect user's shell and return shell type and rc file path"""
+    shell = os.environ.get("SHELL", "")
+
+    if "zsh" in shell:
+        return "zsh", Path.home() / ".zshrc"
+    elif "bash" in shell:
+        # Check for .bashrc first, then .bash_profile
+        bashrc = Path.home() / ".bashrc"
+        if bashrc.exists():
+            return "bash", bashrc
+        return "bash", Path.home() / ".bash_profile"
+    else:
+        return None, None
+
+def setup_shell_integration():
+    """Set up shell integration for autocmd"""
+    shell_type, rc_file = detect_shell()
+
+    if not shell_type:
+        print("Warning: Could not detect shell type (zsh or bash).")
+        print("Shell integration setup skipped. Commands will be printed only.")
+        return False
+
+    print(f"\nautocmd works best with shell integration (commands appear on your prompt).")
+    print(f"This will add a small function to your {rc_file.name}.")
+    response = input("Set up shell integration? (y/n): ").strip().lower()
+
+    if response != 'y':
+        print("Shell integration skipped. Commands will be printed only.")
+        return False
+
+    # Find where autocmd is installed
+    autocmd_path = shutil.which("autocmd")
+    if not autocmd_path:
+        # Fallback: use uv run with the module
+        autocmd_cmd = "uv tool run autocmd"
+    else:
+        autocmd_cmd = autocmd_path
+
+    # Generate shell wrapper function
+    if shell_type == "zsh":
+        wrapper = f'''
+# autocmd shell integration
+autocmd() {{
+    local cmd=$({autocmd_cmd} "$@" 2>/dev/null)
+    if [ -n "$cmd" ]; then
+        print -z "$cmd"
+    fi
+}}
+'''
+    else:  # bash
+        wrapper = f'''
+# autocmd shell integration
+autocmd() {{
+    local cmd=$({autocmd_cmd} "$@" 2>/dev/null)
+    if [ -n "$cmd" ]; then
+        READLINE_LINE="$cmd"
+        READLINE_POINT=${{#READLINE_LINE}}
+    fi
+}}
+bind -x '"\\C-x\\C-a": autocmd'
+'''
+
+    # Check if already added
+    if rc_file.exists():
+        content = rc_file.read_text()
+        if "# autocmd shell integration" in content:
+            print(f"Shell integration already exists in {rc_file}")
+            return True
+
+    # Append to rc file
+    with open(rc_file, "a") as f:
+        f.write(wrapper)
+
+    print(f"\n✓ Shell integration added to {rc_file}")
+    print(f"Run: source {rc_file}")
+    print("Or restart your terminal for changes to take effect.\n")
+
+    # Mark setup as done
+    config_dir = get_config_dir()
+    config_dir.mkdir(parents=True, exist_ok=True)
+    (config_dir / ".shell_setup_done").touch()
+
+    return True
 
 def get_api_key():
     """Get API key from env or config file, prompt if missing"""
     if key := os.environ.get("ANTHROPIC_API_KEY"):
         return key
 
-    config_path = Path.home() / ".config" / "autocmd" / "config"
+    config_path = get_config_dir() / "config"
     if config_path.exists():
         return config_path.read_text().strip()
 
@@ -27,7 +123,11 @@ def clean_command(cmd):
     return cmd.strip()
 
 def main():
-    # Check API key first (even before validating args)
+    # Check if shell integration setup is needed (first run)
+    if not is_shell_setup():
+        setup_shell_integration()
+
+    # Check API key
     api_key = get_api_key()
 
     if len(sys.argv) < 2:

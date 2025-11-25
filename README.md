@@ -1,6 +1,6 @@
 # autocmd
 
-Natural language to shell command translator using Claude Haiku.
+Natural language to shell command translator using Claude Haiku 4.5.
 
 ## Installation
 
@@ -13,21 +13,32 @@ cd /path/to/autocmd
 uv tool install .
 ```
 
-On first run, you'll be prompted to enter your Anthropic API key (stored in `~/.config/autocmd/config`).
+## First Run Setup
+
+The first time you run `autocmd`, it will:
+
+1. **Ask for your Anthropic API key** - Get one at https://console.anthropic.com
+   - Saved securely to `~/.config/autocmd/config`
+
+2. **Offer to set up shell integration** (recommended)
+   - Adds a small wrapper function to your `.zshrc` or `.bashrc`
+   - Makes commands appear directly on your prompt, editable before execution
+   - If you skip this, commands will just be printed (you can copy/paste them)
+
+Just run any autocmd command to start setup:
+
+```bash
+autocmd "check git status"
+```
 
 ## Usage
 
-```bash
-autocmd "git fetch all updates from remote"
-# $ git fetch --all█
-# Press Enter to run, or edit first with arrow keys
-```
+After setup, commands appear on your prompt line as if you typed them:
 
-The tool will:
-1. Convert your natural language to a shell command using Claude Haiku
-2. Pre-fill an editable prompt with the suggested command
-3. Let you edit it (arrow keys, backspace, etc.)
-4. Execute when you press Enter
+```bash
+$ autocmd "git fetch all updates from remote"
+$ git fetch --all█  # ← appears on your prompt, press Enter to run or edit first
+```
 
 ## Examples
 
@@ -36,10 +47,21 @@ autocmd "show git log for last 5 commits"
 autocmd "find all python files modified today"
 autocmd "kill process on port 3000"
 autocmd "compress images in current folder"
+autocmd "create a new branch called feature-x"
 ```
+
+## How It Works
+
+- Uses Claude Haiku 4.5 for fast, accurate command translation
+- Isolated dependencies (won't interfere with other Python projects)
+- Shell integration uses `print -z` (zsh) or `READLINE_LINE` (bash)
+- Works from any directory after installation
 
 ## Uninstall
 
 ```bash
 uv tool uninstall autocmd
+
+# Optionally remove the shell integration line from ~/.zshrc or ~/.bashrc
+# (Look for "# autocmd shell integration")
 ```
