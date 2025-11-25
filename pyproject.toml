@@ -28,7 +28,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatchling.build.targets.wheel]
-packages = ["autocmd.py"]
+packages = []
+
+[tool.hatchling.build.targets.wheel.force-include]
+"autocmd.py" = "autocmd.py"
 
 [tool.hatchling.build.targets.sdist]
 include = [
