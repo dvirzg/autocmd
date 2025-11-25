@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys, os, subprocess, re, getpass, shutil
+import sys, os, re, getpass, shutil
 from pathlib import Path
 from typing import Optional, Tuple
 from anthropic import Anthropic
@@ -33,7 +33,7 @@ def setup_shell_integration() -> bool:
         print("Skipping shell integration. Commands will be printed only.", file=sys.stderr)
         return False
 
-    autocmd_cmd = shutil.which("autocmd") or "uv tool run autocmd"
+    autocmd_cmd = shutil.which("autocmd") or "uv tool run --from autocmd-cli autocmd"
 
     if shell_type == "zsh":
         wrapper = f'\n# autocmd\nautocmd() {{ local cmd=$({autocmd_cmd} "$@"); [ -n "$cmd" ] && print -z "$cmd"; }}\n'
