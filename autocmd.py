@@ -1,106 +1,55 @@
 #!/usr/bin/env python3
-import sys, os, subprocess, readline, re, getpass, shutil
+import sys, os, subprocess, re, getpass, shutil
 from pathlib import Path
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
 def get_config_dir():
-    """Get the config directory path"""
     return Path.home() / ".config" / "autocmd"
 
 def is_shell_setup():
-    """Check if shell integration is already set up"""
-    config_dir = get_config_dir()
-    setup_marker = config_dir / ".shell_setup_done"
-    return setup_marker.exists()
+    return (get_config_dir() / ".shell_setup_done").exists()
 
 def detect_shell():
-    """Detect user's shell and return shell type and rc file path"""
     shell = os.environ.get("SHELL", "")
-
     if "zsh" in shell:
         return "zsh", Path.home() / ".zshrc"
     elif "bash" in shell:
-        # Check for .bashrc first, then .bash_profile
         bashrc = Path.home() / ".bashrc"
-        if bashrc.exists():
-            return "bash", bashrc
-        return "bash", Path.home() / ".bash_profile"
-    else:
-        return None, None
+        return "bash", bashrc if bashrc.exists() else Path.home() / ".bash_profile"
+    return None, None
 
 def setup_shell_integration():
-    """Set up shell integration for autocmd"""
     shell_type, rc_file = detect_shell()
-
     if not shell_type:
-        print("Warning: Could not detect shell type (zsh or bash).", file=sys.stderr)
-        print("Shell integration setup skipped. Commands will be printed only.", file=sys.stderr)
+        print("Unsupported shell.", file=sys.stderr)
         return False
 
-    print(f"autocmd works best with shell integration.", file=sys.stderr)
-    print(f"This will add a small function to your {rc_file.name}.", file=sys.stderr)
-    print("Set up shell integration? (y/n): ", end='', file=sys.stderr, flush=True)
-    response = input().strip().lower()
-
-    if response != 'y':
-        print("Shell integration skipped. Commands will be printed only.", file=sys.stderr)
+    print("\nLet's go through a quick setup.", file=sys.stderr)
+    print("Shell integration injects commands into your shell for easy editing.", file=sys.stderr)
+    print("Enable? (y/n): ", end='', file=sys.stderr, flush=True)
+    if input().strip().lower() != 'y':
+        print("Skipping shell integration. Commands will be printed only.", file=sys.stderr)
         return False
 
-    # Find where autocmd is installed
-    autocmd_path = shutil.which("autocmd")
-    if not autocmd_path:
-        # Fallback: use uv run with the module
-        autocmd_cmd = "uv tool run autocmd"
-    else:
-        autocmd_cmd = autocmd_path
+    autocmd_cmd = shutil.which("autocmd") or "uv tool run autocmd"
 
-    # Generate shell wrapper function
     if shell_type == "zsh":
-        wrapper = f'''
-# autocmd shell integration
-autocmd() {{
-    local cmd=$({autocmd_cmd} "$@")
-    if [ -n "$cmd" ]; then
-        print -z "$cmd"
-    fi
-}}
-'''
-    else:  # bash
-        wrapper = f'''
-# autocmd shell integration
-autocmd() {{
-    local cmd=$({autocmd_cmd} "$@")
-    if [ -n "$cmd" ]; then
-        READLINE_LINE="$cmd"
-        READLINE_POINT=${{#READLINE_LINE}}
-    fi
-}}
-bind -x '"\\C-x\\C-a": autocmd'
-'''
+        wrapper = f'\n# autocmd\nautocmd() {{ local cmd=$({autocmd_cmd} "$@"); [ -n "$cmd" ] && print -z "$cmd"; }}\n'
+    else:
+        wrapper = f'\n# autocmd\nautocmd() {{ local cmd=$({autocmd_cmd} "$@"); [ -n "$cmd" ] && {{ READLINE_LINE="$cmd"; READLINE_POINT=${{#READLINE_LINE}}; }}; }}\n'
 
-    # Check if already added
-    if rc_file.exists():
-        content = rc_file.read_text()
-        if "# autocmd shell integration" in content:
-            print(f"Shell integration already exists in {rc_file}", file=sys.stderr)
-            return True
+    if rc_file.exists() and "# autocmd" in rc_file.read_text():
+        return True
 
-    # Append to rc file
     with open(rc_file, "a") as f:
         f.write(wrapper)
 
-    print(f"\n✓ Shell integration added to {rc_file}", file=sys.stderr)
-
-    # Mark setup as done
-    config_dir = get_config_dir()
-    config_dir.mkdir(parents=True, exist_ok=True)
-    (config_dir / ".shell_setup_done").touch()
-
+    get_config_dir().mkdir(parents=True, exist_ok=True)
+    (get_config_dir() / ".shell_setup_done").touch()
     return True
 
 def get_api_key():
-    """Get API key from env or config file, prompt if missing"""
     if key := os.environ.get("ANTHROPIC_API_KEY"):
         return key
 
@@ -108,109 +57,75 @@ def get_api_key():
     if config_path.exists():
         return config_path.read_text().strip()
 
-    # First run - prompt for key
-    print("Welcome to autocmd! Please enter your Anthropic API key:", file=sys.stderr)
-    key = getpass.getpass("API Key: ").strip()
+    print("Anthropic API key: ", end='', file=sys.stderr, flush=True)
+    key = getpass.getpass("").strip()
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(key)
-    print(f"API key saved to {config_path}", file=sys.stderr)
     return key
 
-def clean_command(cmd):
-    """Remove markdown code blocks and clean output"""
-    cmd = re.sub(r'^```\w*\n?', '', cmd)
-    cmd = re.sub(r'\n?```$', '', cmd)
-    return cmd.strip()
-
 def reset_autocmd():
-    """Reset autocmd to fresh state"""
     config_dir = get_config_dir()
-
-    # Remove config directory
     if config_dir.exists():
-        import shutil
         shutil.rmtree(config_dir)
-        print("✓ Removed configuration files", file=sys.stderr)
 
-    # Remove shell integration from rc files
     shell_type, rc_file = detect_shell()
     if rc_file and rc_file.exists():
         content = rc_file.read_text()
-        if "# autocmd shell integration" in content:
-            # Remove the autocmd shell integration block
+        if "# autocmd" in content:
             lines = content.split('\n')
             new_lines = []
             skip = False
             for line in lines:
-                if "# autocmd shell integration" in line:
+                if "# autocmd" in line:
                     skip = True
-                elif skip and line.strip() == '}':
+                elif skip and '}' in line:
                     skip = False
                     continue
                 elif not skip:
                     new_lines.append(line)
-
             rc_file.write_text('\n'.join(new_lines))
-            print(f"✓ Removed shell integration from {rc_file}", file=sys.stderr)
-            print(f"To complete reset, run:", file=sys.stderr)
-            print(f"  unset -f autocmd && source {rc_file}", file=sys.stderr)
-            print("Or restart your terminal.", file=sys.stderr)
+            print(f"Reset complete. Run: source {rc_file}", file=sys.stderr)
         else:
-            print(f"No shell integration found in {rc_file}", file=sys.stderr)
-
-    print("Reset complete! Next run will go through first-time setup.", file=sys.stderr)
+            print("Reset complete.", file=sys.stderr)
 
 def main():
-    # Load environment variables from .env if present
     load_dotenv()
 
-    # Handle --reset flag
     if len(sys.argv) > 1 and sys.argv[1] == "--reset":
         reset_autocmd()
         sys.exit(0)
 
-    # First-time setup: shell integration + API key
-    needs_shell_setup = not is_shell_setup()
-    if needs_shell_setup:
+    if not is_shell_setup():
+        print("Welcome to autocmd! The text-to-command assistant.", file=sys.stderr)
         setup_shell_integration()
-        # After shell setup, also prompt for API key
         get_api_key()
-        print("\nSetup complete! Reload your shell:", file=sys.stderr)
         shell_type, rc_file = detect_shell()
         if rc_file:
+            print(f"Setup complete! Reload your shell to activate:", file=sys.stderr)
             print(f"  source {rc_file}", file=sys.stderr)
-        print("\nThen try your command again.", file=sys.stderr)
         sys.exit(0)
 
-    # Check API key (for runs after shell setup)
     api_key = get_api_key()
 
     if len(sys.argv) < 2:
-        print("Usage: autocmd \"natural language command\"", file=sys.stderr)
+        print('autocmd: The text-to-command assistant', file=sys.stderr)
         sys.exit(1)
 
-    # Get shell command from Claude
-    model = os.environ.get("MODEL", "claude-haiku-4-5-20251001")
     try:
         client = Anthropic(api_key=api_key)
         response = client.messages.create(
-            model=model,
+            model=os.environ.get("MODEL", "claude-haiku-4-5-20251001"),
             max_tokens=200,
-            messages=[{"role": "user",
-                    "content": f"Convert to a {os.environ.get('SHELL', 'bash')} command. Reply with ONLY the command, no markdown: {' '.join(sys.argv[1:])}"}]
+            messages=[{"role": "user", "content": f"Convert to {os.environ.get('SHELL', 'bash')} command (no markdown): {' '.join(sys.argv[1:])}"}]
         )
-        cmd = clean_command(response.content[0].text)
-
+        cmd = re.sub(r'^```\w*\n?|```$', '', response.content[0].text).strip()
         if not cmd:
-            print("Error: No command generated", file=sys.stderr)
+            print("No command generated", file=sys.stderr)
             sys.exit(1)
-
+        print(cmd)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-
-    # Print command to stdout ONLY - this is the only thing that gets injected
-    print(cmd)
 
 if __name__ == "__main__":
     main()
