@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 import sys, os, subprocess, re, getpass, shutil
 from pathlib import Path
+from typing import Optional, Tuple
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
-def get_config_dir():
+def get_config_dir() -> Path:
     return Path.home() / ".config" / "autocmd"
 
-def is_shell_setup():
+def is_shell_setup() -> bool:
     return (get_config_dir() / ".shell_setup_done").exists()
 
-def detect_shell():
+def detect_shell() -> Tuple[Optional[str], Optional[Path]]:
     shell = os.environ.get("SHELL", "")
     if "zsh" in shell:
         return "zsh", Path.home() / ".zshrc"
@@ -19,7 +20,7 @@ def detect_shell():
         return "bash", bashrc if bashrc.exists() else Path.home() / ".bash_profile"
     return None, None
 
-def setup_shell_integration():
+def setup_shell_integration() -> bool:
     shell_type, rc_file = detect_shell()
     if not shell_type:
         print("Unsupported shell.", file=sys.stderr)
@@ -49,7 +50,7 @@ def setup_shell_integration():
     (get_config_dir() / ".shell_setup_done").touch()
     return True
 
-def get_api_key():
+def get_api_key() -> str:
     if key := os.environ.get("ANTHROPIC_API_KEY"):
         return key
 
@@ -63,7 +64,7 @@ def get_api_key():
     config_path.write_text(key)
     return key
 
-def reset_autocmd():
+def reset_autocmd() -> None:
     config_dir = get_config_dir()
     if config_dir.exists():
         shutil.rmtree(config_dir)
@@ -88,7 +89,7 @@ def reset_autocmd():
         else:
             print("Reset complete.", file=sys.stderr)
 
-def main():
+def main() -> None:
     load_dotenv()
 
     if len(sys.argv) > 1 and sys.argv[1] == "--reset":
@@ -123,8 +124,22 @@ def main():
             print("No command generated", file=sys.stderr)
             sys.exit(1)
         print(cmd)
+    except KeyboardInterrupt:
+        print("\nCancelled", file=sys.stderr)
+        sys.exit(130)
+    except OSError as e:
+        print(f"Error: File system error - {e}", file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        error_msg = str(e)
+        if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+            print(f"Error: Invalid API key. Run 'autocmd --reset' to reconfigure.", file=sys.stderr)
+        elif "rate" in error_msg.lower() or "quota" in error_msg.lower():
+            print(f"Error: API rate limit or quota exceeded. Please try again later.", file=sys.stderr)
+        elif "network" in error_msg.lower() or "connection" in error_msg.lower():
+            print(f"Error: Network connection failed. Check your internet connection.", file=sys.stderr)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":

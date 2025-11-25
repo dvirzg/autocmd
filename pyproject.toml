@@ -1,22 +1,39 @@
 [project]
-name = "autocmd"
+name = "autocmd-cli"
 version = "0.1.0"
 description = "Natural language to shell command translator using Claude"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
-authors = [{name = "Dvir Zagury"}]
+authors = [{name = "Dvir Zagury-Grynbaum"}]
+keywords = ["cli", "shell", "ai", "claude"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+]
 dependencies = [
     "anthropic>=0.39.0",
     "dotenv>=0.9.9",
 ]
 
 [project.urls]
-Homepage = "https://github.com/dvirzagury/autocmd"
+Homepage = "https://github.com/dvirzg/autocmd"
+Repository = "https://github.com/dvirzg/autocmd"
+Issues = "https://github.com/dvirzg/autocmd/issues"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatchling.build]
+include = [
+    "autocmd.py",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
 
 [project.scripts]
 autocmd = "autocmd:main"
