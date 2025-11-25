@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys, os, subprocess, readline, re
+import sys, os, subprocess, readline, re, getpass
 from pathlib import Path
 from anthropic import Anthropic
 
@@ -14,7 +14,7 @@ def get_api_key():
 
     # First run - prompt for key
     print("Welcome to autocmd! Please enter your Anthropic API key:")
-    key = input("API Key: ").strip()
+    key = getpass.getpass("API Key: ").strip()
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(key)
     print(f"API key saved to {config_path}\n")
