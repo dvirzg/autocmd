@@ -1,6 +1,6 @@
 # autocmd
 
-Natural language to shell command translator using Claude Haiku 4.5.
+Natural language to shell command.
 
 ## Installation
 
