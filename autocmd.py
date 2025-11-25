@@ -127,10 +127,6 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nCancelled", file=sys.stderr)
         sys.exit(130)
-    except ImportError as e:
-        print(f"Error: Missing dependency - {e}", file=sys.stderr)
-        print("Try reinstalling: uv tool install --force autocmd", file=sys.stderr)
-        sys.exit(1)
     except OSError as e:
         print(f"Error: File system error - {e}", file=sys.stderr)
         sys.exit(1)
