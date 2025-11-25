@@ -123,9 +123,51 @@ def clean_command(cmd):
     cmd = re.sub(r'\n?```$', '', cmd)
     return cmd.strip()
 
+def reset_autocmd():
+    """Reset autocmd to fresh state"""
+    config_dir = get_config_dir()
+
+    # Remove config directory
+    if config_dir.exists():
+        import shutil
+        shutil.rmtree(config_dir)
+        print("✓ Removed configuration files")
+
+    # Remove shell integration from rc files
+    shell_type, rc_file = detect_shell()
+    if rc_file and rc_file.exists():
+        content = rc_file.read_text()
+        if "# autocmd shell integration" in content:
+            # Remove the autocmd shell integration block
+            lines = content.split('\n')
+            new_lines = []
+            skip = False
+            for line in lines:
+                if "# autocmd shell integration" in line:
+                    skip = True
+                elif skip and line.strip() == '}':
+                    skip = False
+                    continue
+                elif not skip:
+                    new_lines.append(line)
+
+            rc_file.write_text('\n'.join(new_lines))
+            print(f"✓ Removed shell integration from {rc_file}")
+            print(f"\nRun: source {rc_file}")
+            print("Or restart your terminal for changes to take effect.")
+        else:
+            print(f"No shell integration found in {rc_file}")
+
+    print("\nReset complete! Next run will go through first-time setup.")
+
 def main():
     # Load environment variables from .env if present
     load_dotenv()
+
+    # Handle --reset flag
+    if len(sys.argv) > 1 and sys.argv[1] == "--reset":
+        reset_autocmd()
+        sys.exit(0)
 
     # Check if shell integration setup is needed (first run)
     if not is_shell_setup():
