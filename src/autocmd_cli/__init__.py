@@ -33,6 +33,8 @@ def setup_shell_integration() -> bool:
     print("Enable? (y/n): ", end='', file=sys.stderr, flush=True)
     if input().strip().lower() != 'y':
         print("Skipping shell integration. Commands will be printed only.", file=sys.stderr)
+        get_config_dir().mkdir(parents=True, exist_ok=True)
+        (get_config_dir() / ".shell_setup_done").touch()
         return False
 
     autocmd_cmd = shutil.which("autocmd") or "uv tool run --from autocmd-cli autocmd"
@@ -43,6 +45,8 @@ def setup_shell_integration() -> bool:
         wrapper = f'\n# autocmd\nautocmd() {{ local cmd=$({autocmd_cmd} "$@"); [ -n "$cmd" ] && {{ READLINE_LINE="$cmd"; READLINE_POINT=${{#READLINE_LINE}}; }}; }}\n'
 
     if rc_file.exists() and "# autocmd" in rc_file.read_text():
+        get_config_dir().mkdir(parents=True, exist_ok=True)
+        (get_config_dir() / ".shell_setup_done").touch()
         return True
 
     with open(rc_file, "a") as f:
