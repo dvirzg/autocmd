@@ -34,16 +34,16 @@ def setup_shell_integration():
     shell_type, rc_file = detect_shell()
 
     if not shell_type:
-        print("Warning: Could not detect shell type (zsh or bash).")
-        print("Shell integration setup skipped. Commands will be printed only.")
+        print("Warning: Could not detect shell type (zsh or bash).", file=sys.stderr)
+        print("Shell integration setup skipped. Commands will be printed only.", file=sys.stderr)
         return False
 
-    print(f"autocmd works best with shell integration.")
-    print(f"This will add a small function to your {rc_file.name}.")
+    print(f"autocmd works best with shell integration.", file=sys.stderr)
+    print(f"This will add a small function to your {rc_file.name}.", file=sys.stderr)
     response = input("Set up shell integration? (y/n): ").strip().lower()
 
     if response != 'y':
-        print("Shell integration skipped. Commands will be printed only.")
+        print("Shell integration skipped. Commands will be printed only.", file=sys.stderr)
         return False
 
     # Find where autocmd is installed
@@ -89,7 +89,7 @@ bind -x '"\\C-x\\C-a": autocmd'
     with open(rc_file, "a") as f:
         f.write(wrapper)
 
-    print(f"\n✓ Shell integration added to {rc_file}")
+    print(f"\n✓ Shell integration added to {rc_file}", file=sys.stderr)
 
     # Mark setup as done
     config_dir = get_config_dir()
