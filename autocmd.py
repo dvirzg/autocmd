@@ -59,7 +59,7 @@ def setup_shell_integration():
         wrapper = f'''
 # autocmd shell integration
 autocmd() {{
-    local cmd=$({autocmd_cmd} "$@" 2>/dev/null)
+    local cmd=$({autocmd_cmd} "$@")
     if [ -n "$cmd" ]; then
         print -z "$cmd"
     fi
@@ -69,7 +69,7 @@ autocmd() {{
         wrapper = f'''
 # autocmd shell integration
 autocmd() {{
-    local cmd=$({autocmd_cmd} "$@" 2>/dev/null)
+    local cmd=$({autocmd_cmd} "$@")
     if [ -n "$cmd" ]; then
         READLINE_LINE="$cmd"
         READLINE_POINT=${{#READLINE_LINE}}
@@ -114,7 +114,7 @@ def get_api_key():
     key = getpass.getpass("API Key: ").strip()
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(key)
-    print(f"API key saved to {config_path}\n")
+    print(f"API key saved to {config_path}")
     return key
 
 def clean_command(cmd):
@@ -153,8 +153,10 @@ def reset_autocmd():
 
             rc_file.write_text('\n'.join(new_lines))
             print(f"✓ Removed shell integration from {rc_file}")
-            print(f"\nRun: source {rc_file}")
-            print("Or restart your terminal for changes to take effect.")
+            print(f"\nTo complete reset, run:")
+            print(f"  unset -f autocmd")
+            print(f"  source {rc_file}")
+            print("Or restart your terminal.")
         else:
             print(f"No shell integration found in {rc_file}")
 
@@ -169,13 +171,20 @@ def main():
         reset_autocmd()
         sys.exit(0)
 
-    # Check if shell integration setup is needed (first run)
-    if not is_shell_setup():
+    # First-time setup: shell integration + API key
+    needs_shell_setup = not is_shell_setup()
+    if needs_shell_setup:
         setup_shell_integration()
-        print("\nSetup complete! Please run your command again.")
+        # After shell setup, also prompt for API key
+        get_api_key()
+        print("\nSetup complete! Reload your shell:")
+        shell_type, rc_file = detect_shell()
+        if rc_file:
+            print(f"  source {rc_file}")
+        print("\nThen try your command again.")
         sys.exit(0)
 
-    # Check API key
+    # Check API key (for runs after shell setup)
     api_key = get_api_key()
 
     if len(sys.argv) < 2:
