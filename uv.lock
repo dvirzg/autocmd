@@ -101,14 +101,14 @@ wheels = [
 [[package]]
 name = "autocmd"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "anthropic", version = "0.72.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "anthropic", version = "0.75.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "anthropic" }]
+requires-dist = [{ name = "anthropic", specifier = ">=0.39.0" }]
 
 [[package]]
 name = "certifi"

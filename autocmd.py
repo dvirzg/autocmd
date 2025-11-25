@@ -53,10 +53,10 @@ def main():
         print(f"Error: {e}")
         sys.exit(1)
 
-    # Let user edit
+    # Show command and let user edit (no prompt, just the text)
     readline.set_startup_hook(lambda: readline.insert_text(cmd))
     try:
-        final = input("$ ")
+        final = input()
     finally:
         readline.set_startup_hook()
 
