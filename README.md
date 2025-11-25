@@ -6,7 +6,7 @@ Natural language to shell command translator using Claude Haiku 4.5.
 
 ```bash
 # Install globally with uv
-uv tool install git+https://github.com/dvirzagury/autocmd.git
+uv tool install git+https://github.com/dvirzg/autocmd.git
 
 # Or install from local directory
 cd /path/to/autocmd
@@ -57,13 +57,32 @@ autocmd "create a new branch called feature-x"
 - Shell integration uses `print -z` (zsh) or `READLINE_LINE` (bash)
 - Works from any directory after installation
 
+## Configuration
+
+### Using a Different Claude Model
+
+By default, `autocmd` uses `claude-haiku-4-5-20251001` for fast responses. To use a different model, set the `MODEL` environment variable:
+
+```bash
+# One-time use
+MODEL=claude-sonnet-4-20250514 autocmd "your command here"
+
+# Set permanently in your shell config (~/.zshrc or ~/.bashrc)
+export MODEL=claude-sonnet-4-20250514
+```
+
+Available models:
+- `claude-haiku-4-5-20251001` (default, fastest)
+- `claude-sonnet-4-20250514` (more capable)
+- `claude-opus-4-20250514` (most capable)
+
 ## Development
 
 To contribute or develop locally:
 
 ```bash
 # Clone the repo
-git clone https://github.com/dvirzagury/autocmd.git
+git clone https://github.com/dvirzg/autocmd.git
 cd autocmd
 
 # Run the dev setup script
