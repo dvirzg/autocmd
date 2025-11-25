@@ -10,13 +10,13 @@ USER_SHELL=$(basename "$SHELL")
 
 if [[ "$USER_SHELL" == "zsh" ]]; then
     RC_FILE="$HOME/.zshrc"
-    ALIAS_CMD="alias autocmd-dev='f() { if [[ \"\$1\" == \"--reset\" ]]; then uv run $AUTOCMD_DIR/autocmd.py --reset; return; fi; local cmd=\$(uv run $AUTOCMD_DIR/autocmd.py \"\$@\"); if [ -n \"\$cmd\" ]; then print -z \"\$cmd\"; fi }; f'"
+    ALIAS_CMD="alias autocmd-dev='f() { if [[ \"\$1\" == \"--reset\" ]]; then uv run $AUTOCMD_DIR/src/autocmd_cli/__init__.py --reset; return; fi; local cmd=\$(uv run $AUTOCMD_DIR/src/autocmd_cli/__init__.py \"\$@\"); if [ -n \"\$cmd\" ]; then print -z \"\$cmd\"; fi }; f'"
 elif [[ "$USER_SHELL" == "bash" ]]; then
     RC_FILE="$HOME/.bashrc"
     if [[ ! -f "$RC_FILE" ]]; then
         RC_FILE="$HOME/.bash_profile"
     fi
-    ALIAS_CMD="alias autocmd-dev='f() { if [[ \"\$1\" == \"--reset\" ]]; then uv run $AUTOCMD_DIR/autocmd.py --reset; return; fi; local cmd=\$(uv run $AUTOCMD_DIR/autocmd.py \"\$@\"); if [ -n \"\$cmd\" ]; then READLINE_LINE=\"\$cmd\"; READLINE_POINT=\${#READLINE_LINE}; fi }; f'"
+    ALIAS_CMD="alias autocmd-dev='f() { if [[ \"\$1\" == \"--reset\" ]]; then uv run $AUTOCMD_DIR/src/autocmd_cli/__init__.py --reset; return; fi; local cmd=\$(uv run $AUTOCMD_DIR/src/autocmd_cli/__init__.py \"\$@\"); if [ -n \"\$cmd\" ]; then READLINE_LINE=\"\$cmd\"; READLINE_POINT=\${#READLINE_LINE}; fi }; f'"
 else
     echo "Unsupported shell: $USER_SHELL. Please use zsh or bash."
     exit 1
