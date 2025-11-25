@@ -57,6 +57,27 @@ autocmd "create a new branch called feature-x"
 - Shell integration uses `print -z` (zsh) or `READLINE_LINE` (bash)
 - Works from any directory after installation
 
+## Development
+
+To contribute or develop locally:
+
+```bash
+# Clone the repo
+git clone https://github.com/dvirzagury/autocmd.git
+cd autocmd
+
+# Run the dev setup script
+./dev-setup.sh
+
+# Reload your shell
+source ~/.zshrc  # or ~/.bashrc
+
+# Use autocmd-dev for development (always uses latest code)
+autocmd-dev "check git status"
+```
+
+The `autocmd-dev` alias lets you test changes immediately without reinstalling. Just edit the code and run `autocmd-dev` - it always uses your latest changes with full shell integration.
+
 ## Uninstall
 
 ```bash
