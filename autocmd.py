@@ -1,6 +1,30 @@
 #!/usr/bin/env python3
-import sys, os, subprocess, readline
+import sys, os, subprocess, readline, re
+from pathlib import Path
 from anthropic import Anthropic
+
+def get_api_key():
+    """Get API key from env or config file, prompt if missing"""
+    if key := os.environ.get("ANTHROPIC_API_KEY"):
+        return key
+
+    config_path = Path.home() / ".config" / "autocmd" / "config"
+    if config_path.exists():
+        return config_path.read_text().strip()
+
+    # First run - prompt for key
+    print("Welcome to autocmd! Please enter your Anthropic API key:")
+    key = input("API Key: ").strip()
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(key)
+    print(f"API key saved to {config_path}\n")
+    return key
+
+def clean_command(cmd):
+    """Remove markdown code blocks and clean output"""
+    cmd = re.sub(r'^```\w*\n?', '', cmd)
+    cmd = re.sub(r'\n?```$', '', cmd)
+    return cmd.strip()
 
 def main():
     if len(sys.argv) < 2:
@@ -8,19 +32,19 @@ def main():
         sys.exit(1)
 
     # Get shell command from Claude
-    client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    client = Anthropic(api_key=get_api_key())
     response = client.messages.create(
-        model="claude-sonnet-4-5-20250929",
+        model="claude-3-5-haiku-20241022",
         max_tokens=200,
-        messages=[{"role": "user", "content": f"Convert to a {os.environ.get('SHELL', 'bash')} command. Reply with ONLY the command: {' '.join(sys.argv[1:])}"}]
+        messages=[{"role": "user",
+                "content": f"Convert to a {os.environ.get('SHELL', 'bash')} command. Reply with ONLY the command, no markdown: {' '.join(sys.argv[1:])}"}]
     )
-    cmd = response.content[0].text.strip()
+    cmd = clean_command(response.content[0].text)
 
-    # Show and let user edit
-    print(f"\nSuggested: {cmd}\n")
+    # Let user edit
     readline.set_startup_hook(lambda: readline.insert_text(cmd))
     try:
-        final = input("Command: ")
+        final = input("$ ")
     finally:
         readline.set_startup_hook()
 
