@@ -1,11 +1,21 @@
 [project]
 name = "autocmd"
 version = "0.1.0"
-description = "Natural language to shell command translator"
+description = "Natural language to shell command translator using Claude"
+readme = "README.md"
 requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [{name = "Dvir Zagury"}]
 dependencies = [
-    "anthropic",
+    "anthropic>=0.39.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/dvirzagury/autocmd"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project.scripts]
 autocmd = "autocmd:main"
