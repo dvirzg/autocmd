@@ -40,7 +40,8 @@ def setup_shell_integration():
 
     print(f"autocmd works best with shell integration.", file=sys.stderr)
     print(f"This will add a small function to your {rc_file.name}.", file=sys.stderr)
-    response = input("Set up shell integration? (y/n): ").strip().lower()
+    print("Set up shell integration? (y/n): ", end='', file=sys.stderr, flush=True)
+    response = input().strip().lower()
 
     if response != 'y':
         print("Shell integration skipped. Commands will be printed only.", file=sys.stderr)
@@ -82,7 +83,7 @@ bind -x '"\\C-x\\C-a": autocmd'
     if rc_file.exists():
         content = rc_file.read_text()
         if "# autocmd shell integration" in content:
-            print(f"Shell integration already exists in {rc_file}")
+            print(f"Shell integration already exists in {rc_file}", file=sys.stderr)
             return True
 
     # Append to rc file
@@ -108,11 +109,11 @@ def get_api_key():
         return config_path.read_text().strip()
 
     # First run - prompt for key
-    print("Welcome to autocmd! Please enter your Anthropic API key:")
+    print("Welcome to autocmd! Please enter your Anthropic API key:", file=sys.stderr)
     key = getpass.getpass("API Key: ").strip()
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(key)
-    print(f"API key saved to {config_path}")
+    print(f"API key saved to {config_path}", file=sys.stderr)
     return key
 
 def clean_command(cmd):
@@ -129,7 +130,7 @@ def reset_autocmd():
     if config_dir.exists():
         import shutil
         shutil.rmtree(config_dir)
-        print("✓ Removed configuration files")
+        print("✓ Removed configuration files", file=sys.stderr)
 
     # Remove shell integration from rc files
     shell_type, rc_file = detect_shell()
@@ -150,15 +151,14 @@ def reset_autocmd():
                     new_lines.append(line)
 
             rc_file.write_text('\n'.join(new_lines))
-            print(f"✓ Removed shell integration from {rc_file}")
-            print(f"To complete reset, run:")
-            print(f"  unset -f autocmd")
-            print(f"  source {rc_file}")
-            print("Or restart your terminal.")
+            print(f"✓ Removed shell integration from {rc_file}", file=sys.stderr)
+            print(f"To complete reset, run:", file=sys.stderr)
+            print(f"  unset -f autocmd && source {rc_file}", file=sys.stderr)
+            print("Or restart your terminal.", file=sys.stderr)
         else:
-            print(f"No shell integration found in {rc_file}")
+            print(f"No shell integration found in {rc_file}", file=sys.stderr)
 
-    print("Reset complete! Next run will go through first-time setup.")
+    print("Reset complete! Next run will go through first-time setup.", file=sys.stderr)
 
 def main():
     # Load environment variables from .env if present
@@ -175,18 +175,18 @@ def main():
         setup_shell_integration()
         # After shell setup, also prompt for API key
         get_api_key()
-        print("\nSetup complete! Reload your shell:")
+        print("\nSetup complete! Reload your shell:", file=sys.stderr)
         shell_type, rc_file = detect_shell()
         if rc_file:
-            print(f"  source {rc_file}")
-        print("\nThen try your command again.")
+            print(f"  source {rc_file}", file=sys.stderr)
+        print("\nThen try your command again.", file=sys.stderr)
         sys.exit(0)
 
     # Check API key (for runs after shell setup)
     api_key = get_api_key()
 
     if len(sys.argv) < 2:
-        print("Usage: autocmd \"natural language command\"")
+        print("Usage: autocmd \"natural language command\"", file=sys.stderr)
         sys.exit(1)
 
     # Get shell command from Claude
@@ -202,14 +202,14 @@ def main():
         cmd = clean_command(response.content[0].text)
 
         if not cmd:
-            print("Error: No command generated")
+            print("Error: No command generated", file=sys.stderr)
             sys.exit(1)
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Just print the command - the shell wrapper will handle the rest
+    # Print command to stdout ONLY - this is the only thing that gets injected
     print(cmd)
 
 if __name__ == "__main__":
