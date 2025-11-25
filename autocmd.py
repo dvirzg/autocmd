@@ -38,7 +38,7 @@ def main():
     try:
         client = Anthropic(api_key=api_key)
         response = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             max_tokens=200,
             messages=[{"role": "user",
                     "content": f"Convert to a {os.environ.get('SHELL', 'bash')} command. Reply with ONLY the command, no markdown: {' '.join(sys.argv[1:])}"}]
