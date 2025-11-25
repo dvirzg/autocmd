@@ -38,7 +38,7 @@ def setup_shell_integration():
         print("Shell integration setup skipped. Commands will be printed only.")
         return False
 
-    print(f"\nautocmd works best with shell integration (commands appear on your prompt).")
+    print(f"autocmd works best with shell integration.")
     print(f"This will add a small function to your {rc_file.name}.")
     response = input("Set up shell integration? (y/n): ").strip().lower()
 
@@ -126,9 +126,12 @@ def clean_command(cmd):
 def main():
     # Load environment variables from .env if present
     load_dotenv()
+
     # Check if shell integration setup is needed (first run)
     if not is_shell_setup():
         setup_shell_integration()
+        print("\nSetup complete! Please run your command again.")
+        sys.exit(0)
 
     # Check API key
     api_key = get_api_key()
