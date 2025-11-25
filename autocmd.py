@@ -53,23 +53,8 @@ def main():
         print(f"Error: {e}")
         sys.exit(1)
 
-    # Show command and let user edit
+    # Just print the command - the shell wrapper will handle the rest
     print(cmd)
-
-    # Use readline only in interactive terminals
-    if sys.stdin.isatty():
-        readline.set_startup_hook(lambda: readline.insert_text(cmd))
-        try:
-            final = input()
-        finally:
-            readline.set_startup_hook()
-    else:
-        # Non-interactive mode, just use the command
-        final = cmd
-
-    # Execute
-    if final:
-        subprocess.run(final, shell=True)
 
 if __name__ == "__main__":
     main()
