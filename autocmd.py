@@ -90,8 +90,6 @@ bind -x '"\\C-x\\C-a": autocmd'
         f.write(wrapper)
 
     print(f"\n✓ Shell integration added to {rc_file}")
-    print(f"Run: source {rc_file}")
-    print("Or restart your terminal for changes to take effect.\n")
 
     # Mark setup as done
     config_dir = get_config_dir()
@@ -153,14 +151,14 @@ def reset_autocmd():
 
             rc_file.write_text('\n'.join(new_lines))
             print(f"✓ Removed shell integration from {rc_file}")
-            print(f"\nTo complete reset, run:")
+            print(f"To complete reset, run:")
             print(f"  unset -f autocmd")
             print(f"  source {rc_file}")
             print("Or restart your terminal.")
         else:
             print(f"No shell integration found in {rc_file}")
 
-    print("\nReset complete! Next run will go through first-time setup.")
+    print("Reset complete! Next run will go through first-time setup.")
 
 def main():
     # Load environment variables from .env if present
