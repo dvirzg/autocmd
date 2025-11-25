@@ -53,12 +53,20 @@ def main():
         print(f"Error: {e}")
         sys.exit(1)
 
-    # Show command and let user edit (no prompt, just the text)
-    readline.set_startup_hook(lambda: readline.insert_text(cmd))
-    try:
-        final = input()
-    finally:
-        readline.set_startup_hook()
+    # Show command and let user edit
+    print(cmd)
+
+    # Use raw terminal control for better editing experience
+    import sys
+    if sys.stdin.isatty():
+        readline.set_startup_hook(lambda: readline.insert_text(cmd))
+        try:
+            final = input()
+        finally:
+            readline.set_startup_hook()
+    else:
+        # Non-interactive mode, just use the command
+        final = cmd
 
     # Execute
     if final:
