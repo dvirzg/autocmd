@@ -56,8 +56,7 @@ def main():
     # Show command and let user edit
     print(cmd)
 
-    # Use raw terminal control for better editing experience
-    import sys
+    # Use readline only in interactive terminals
     if sys.stdin.isatty():
         readline.set_startup_hook(lambda: readline.insert_text(cmd))
         try:
