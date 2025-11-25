@@ -30,13 +30,5 @@ build-backend = "hatchling.build"
 [tool.hatchling.build.targets.wheel]
 packages = ["src/autocmd_cli"]
 
-[tool.hatchling.build.targets.sdist]
-include = [
-    "src/autocmd_cli",
-    "README.md",
-    "LICENSE",
-    "pyproject.toml",
-]
-
 [project.scripts]
 autocmd = "autocmd_cli:main"
