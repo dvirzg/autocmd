@@ -35,14 +35,23 @@ def main():
         sys.exit(1)
 
     # Get shell command from Claude
-    client = Anthropic(api_key=api_key)
-    response = client.messages.create(
-        model="claude-3-5-haiku-20241022",
-        max_tokens=200,
-        messages=[{"role": "user",
-                "content": f"Convert to a {os.environ.get('SHELL', 'bash')} command. Reply with ONLY the command, no markdown: {' '.join(sys.argv[1:])}"}]
-    )
-    cmd = clean_command(response.content[0].text)
+    try:
+        client = Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-3-5-haiku-20241022",
+            max_tokens=200,
+            messages=[{"role": "user",
+                    "content": f"Convert to a {os.environ.get('SHELL', 'bash')} command. Reply with ONLY the command, no markdown: {' '.join(sys.argv[1:])}"}]
+        )
+        cmd = clean_command(response.content[0].text)
+
+        if not cmd:
+            print("Error: No command generated")
+            sys.exit(1)
+
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
     # Let user edit
     readline.set_startup_hook(lambda: readline.insert_text(cmd))
