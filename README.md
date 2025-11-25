@@ -60,14 +60,14 @@ autocmd "create a new branch called feature-x"
 
 ### Using a Different Claude Model
 
-By default, `autocmd` uses `claude-haiku-4-5-20251001` for fast responses. To use a different model, set the `MODEL` environment variable:
+By default, `autocmd` uses `claude-haiku-4-5-20251001` for fast responses. To use a different model, set the `AUTOCMD_MODEL` environment variable:
 
 ```bash
 # One-time use
-MODEL=claude-sonnet-4-20250514 autocmd "your command here"
+AUTOCMD_MODEL=claude-sonnet-4-20250514 autocmd "your command here"
 
 # Set permanently in your shell config (~/.zshrc or ~/.bashrc)
-export MODEL=claude-sonnet-4-20250514
+export AUTOCMD_MODEL=claude-sonnet-4-20250514
 ```
 
 Available models:

@@ -5,6 +5,8 @@ from typing import Optional, Tuple
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
+DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+
 def get_config_dir() -> Path:
     return Path.home() / ".config" / "autocmd"
 
@@ -115,7 +117,7 @@ def main() -> None:
     try:
         client = Anthropic(api_key=api_key)
         response = client.messages.create(
-            model=os.environ.get("MODEL", "claude-haiku-4-5-20251001"),
+            model=os.environ.get("AUTOCMD_MODEL", DEFAULT_MODEL),
             max_tokens=200,
             messages=[{"role": "user", "content": f"Convert to {os.environ.get('SHELL', 'bash')} command (no markdown): {' '.join(sys.argv[1:])}"}]
         )
