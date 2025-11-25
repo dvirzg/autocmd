@@ -5,12 +5,11 @@ Natural language to shell command translator using Claude Haiku 4.5.
 ## Installation
 
 ```bash
-# Install globally with uv
-uv tool install git+https://github.com/dvirzg/autocmd.git
+# Install from PyPI (recommended)
+uv tool install autocmd-cli
 
-# Or install from local directory
-cd /path/to/autocmd
-uv tool install .
+# Or install directly from git
+uv tool install git+https://github.com/dvirzg/autocmd.git
 ```
 
 ## First Run Setup
