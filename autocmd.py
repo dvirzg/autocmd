@@ -27,12 +27,15 @@ def clean_command(cmd):
     return cmd.strip()
 
 def main():
+    # Check API key first (even before validating args)
+    api_key = get_api_key()
+
     if len(sys.argv) < 2:
         print("Usage: autocmd \"natural language command\"")
         sys.exit(1)
 
     # Get shell command from Claude
-    client = Anthropic(api_key=get_api_key())
+    client = Anthropic(api_key=api_key)
     response = client.messages.create(
         model="claude-3-5-haiku-20241022",
         max_tokens=200,
