@@ -5,18 +5,20 @@ AUTOCMD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "Setting up autocmd development environment..."
 
-# Detect shell
-if [[ -n "$ZSH_VERSION" ]]; then
+# Detect user's shell (not the script's shell)
+USER_SHELL=$(basename "$SHELL")
+
+if [[ "$USER_SHELL" == "zsh" ]]; then
     RC_FILE="$HOME/.zshrc"
     ALIAS_CMD="alias autocmd-dev='f() { local cmd=\$(uv run $AUTOCMD_DIR/autocmd.py \"\$@\"); if [ -n \"\$cmd\" ]; then print -z \"\$cmd\"; fi }; f'"
-elif [[ -n "$BASH_VERSION" ]]; then
+elif [[ "$USER_SHELL" == "bash" ]]; then
     RC_FILE="$HOME/.bashrc"
     if [[ ! -f "$RC_FILE" ]]; then
         RC_FILE="$HOME/.bash_profile"
     fi
     ALIAS_CMD="alias autocmd-dev='f() { local cmd=\$(uv run $AUTOCMD_DIR/autocmd.py \"\$@\"); if [ -n \"\$cmd\" ]; then READLINE_LINE=\"\$cmd\"; READLINE_POINT=\${#READLINE_LINE}; fi }; f'"
 else
-    echo "Unsupported shell. Please use zsh or bash."
+    echo "Unsupported shell: $USER_SHELL. Please use zsh or bash."
     exit 1
 fi
 
