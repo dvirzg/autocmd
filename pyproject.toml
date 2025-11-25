@@ -1,0 +1,11 @@
+[project]
+name = "autocmd"
+version = "0.1.0"
+description = "Natural language to shell command translator"
+requires-python = ">=3.8"
+dependencies = [
+    "anthropic",
+]
+
+[project.scripts]
+autocmd = "autocmd:main"

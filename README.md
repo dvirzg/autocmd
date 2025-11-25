@@ -5,18 +5,14 @@ Natural language to shell command translator using Claude API.
 ## Setup
 
 ```bash
-# Create venv and install dependencies with uv
-uv venv
-uv pip install -r requirements.txt
+# Sync dependencies with uv
+uv sync
 
 # Set your API key
 export ANTHROPIC_API_KEY="sk-ant-..."
 
 # Make executable
 chmod +x autocmd.py
-
-# Optional: Add to PATH
-ln -s $(pwd)/autocmd.py /usr/local/bin/autocmd
 ```
 
 ## Usage
