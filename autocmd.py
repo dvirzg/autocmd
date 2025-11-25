@@ -2,6 +2,7 @@
 import sys, os, subprocess, readline, re, getpass, shutil
 from pathlib import Path
 from anthropic import Anthropic
+from dotenv import load_dotenv
 
 def get_config_dir():
     """Get the config directory path"""
@@ -123,6 +124,8 @@ def clean_command(cmd):
     return cmd.strip()
 
 def main():
+    # Load environment variables from .env if present
+    load_dotenv()
     # Check if shell integration setup is needed (first run)
     if not is_shell_setup():
         setup_shell_integration()
@@ -135,10 +138,11 @@ def main():
         sys.exit(1)
 
     # Get shell command from Claude
+    model = os.environ.get("MODEL", "claude-haiku-4-5-20251001")
     try:
         client = Anthropic(api_key=api_key)
         response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model=model,
             max_tokens=200,
             messages=[{"role": "user",
                     "content": f"Convert to a {os.environ.get('SHELL', 'bash')} command. Reply with ONLY the command, no markdown: {' '.join(sys.argv[1:])}"}]
