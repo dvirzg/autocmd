@@ -139,12 +139,17 @@ def main() -> None:
                     print(text, end="", flush=True, file=sys.stderr)
                 full_response += text
             
-            # Clear the stderr line so the final command is clean on stdout
-            # \r goes to start of line, \033[K clears line
+            # Clear the streamed output
             if sys.stderr.isatty():
-                print("\r\033[K", end="", file=sys.stderr, flush=True)
+                # Count lines to move up
+                num_lines = full_response.count('\n')
+                # Move up num_lines, then clear to end of screen (\033[J)
+                # \033[2K clears the current line, \033[1G moves to column 1
+                if num_lines > 0:
+                    print(f"\033[{num_lines}A", end="", file=sys.stderr)
+                print("\r\033[J", end="", file=sys.stderr, flush=True)
             else:
-                # If not a TTY, just print a newline
+                # If not a TTY, just print a newline to separate
                 print("", file=sys.stderr)
             
             cmd = re.sub(r'^```\w*\n?|```$', '', full_response).strip()
