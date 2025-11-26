@@ -1,6 +1,6 @@
 [project]
 name = "autocmd-cli"
-version = "0.1.6"
+version = "0.1.7"
 description = "Natural language to shell command."
 readme = "README.md"
 requires-python = ">=3.8"
