@@ -44,6 +44,17 @@ autocmd "kill process on port 3000"
 
 ## Configuration
 
+**Settings**
+
+Configure `autocmd` behavior with:
+
+```bash
+autocmd --settings
+```
+
+This allows you to:
+- Toggle streaming output on/off (default: on)
+
 **Model selection**
 
 By default `autocmd` uses `claude-haiku-4-5-20251001`. To change it, set `AUTOCMD_MODEL`:
@@ -54,6 +65,14 @@ AUTOCMD_MODEL=claude-sonnet-4-20250514 autocmd "your command here"
 
 # In your shell config (~/.zshrc or ~/.bashrc)
 export AUTOCMD_MODEL=claude-sonnet-4-20250514
+```
+
+**Reset configuration**
+
+To reset all settings and API key:
+
+```bash
+autocmd --reset
 ```
 
 ## Development

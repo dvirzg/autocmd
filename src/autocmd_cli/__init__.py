@@ -10,6 +10,41 @@ DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 def get_config_dir() -> Path:
     return Path.home() / ".config" / "autocmd"
 
+def get_settings_file() -> Path:
+    return get_config_dir() / "settings"
+
+def get_setting(key: str, default: str = "") -> str:
+    settings_file = get_settings_file()
+    if not settings_file.exists():
+        return default
+
+    content = settings_file.read_text()
+    for line in content.split('\n'):
+        if '=' in line:
+            k, v = line.split('=', 1)
+            if k.strip() == key:
+                return v.strip()
+    return default
+
+def set_setting(key: str, value: str) -> None:
+    settings_file = get_settings_file()
+    settings_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # Read existing settings
+    settings = {}
+    if settings_file.exists():
+        content = settings_file.read_text()
+        for line in content.split('\n'):
+            if '=' in line:
+                k, v = line.split('=', 1)
+                settings[k.strip()] = v.strip()
+
+    # Update setting
+    settings[key] = value
+
+    # Write back
+    settings_file.write_text('\n'.join([f"{k}={v}" for k, v in settings.items()]))
+
 def is_shell_setup() -> bool:
     return (get_config_dir() / ".shell_setup_done").exists()
 
@@ -70,6 +105,24 @@ def get_api_key() -> str:
     config_path.write_text(key)
     return key
 
+def manage_settings() -> None:
+    print("autocmd settings:", file=sys.stderr)
+    print("", file=sys.stderr)
+
+    # Streaming setting
+    current_streaming = get_setting("streaming", "true")
+    print(f"Streaming: {current_streaming}", file=sys.stderr)
+    print("Enable streaming output? (y/n): ", end='', file=sys.stderr, flush=True)
+    choice = input().strip().lower()
+    if choice == 'y':
+        set_setting("streaming", "true")
+        print("Streaming enabled.", file=sys.stderr)
+    elif choice == 'n':
+        set_setting("streaming", "false")
+        print("Streaming disabled.", file=sys.stderr)
+    else:
+        print("No changes made.", file=sys.stderr)
+
 def reset_autocmd() -> None:
     config_dir = get_config_dir()
     if config_dir.exists():
@@ -106,6 +159,10 @@ def main() -> None:
         reset_autocmd()
         sys.exit(0)
 
+    if len(sys.argv) > 1 and sys.argv[1] == "--settings":
+        manage_settings()
+        sys.exit(0)
+
     if not is_shell_setup():
         print("Welcome to autocmd! The text-to-command assistant.", file=sys.stderr)
         setup_shell_integration()
@@ -122,37 +179,54 @@ def main() -> None:
         print('autocmd: The text-to-command assistant', file=sys.stderr)
         sys.exit(1)
 
+    streaming_enabled = get_setting("streaming", "true") == "true"
+
     try:
         client = Anthropic(api_key=api_key)
-        with client.messages.stream(
-            model=os.environ.get("AUTOCMD_MODEL", DEFAULT_MODEL),
-            max_tokens=200,
-            messages=[{"role": "user", "content": f"Convert to {os.environ.get('SHELL', 'bash')} command (no markdown): {' '.join(sys.argv[1:])}"}]
-        ) as stream:
-            full_response = ""
-            for text in stream.text_stream:
-                # Write directly to buffer to bypass any text wrapper buffering
-                if hasattr(sys.stderr, 'buffer'):
-                    sys.stderr.buffer.write(text.encode('utf-8'))
-                    sys.stderr.buffer.flush()
+        prompt = f"You are a command-line assistant. Convert the user's request to a single {os.environ.get('SHELL', 'bash')} command. Output ONLY the command, nothing else - no explanations, no markdown, no options, no alternatives. Just the one best command."
+
+        if streaming_enabled:
+            with client.messages.stream(
+                model=os.environ.get("AUTOCMD_MODEL", DEFAULT_MODEL),
+                max_tokens=200,
+                messages=[{"role": "user", "content": f"{prompt}\n\nRequest: {' '.join(sys.argv[1:])}"}]
+            ) as stream:
+                full_response = ""
+                for text in stream.text_stream:
+                    # Write directly to buffer to bypass any text wrapper buffering
+                    if hasattr(sys.stderr, 'buffer'):
+                        sys.stderr.buffer.write(text.encode('utf-8'))
+                        sys.stderr.buffer.flush()
+                    else:
+                        print(text, end="", flush=True, file=sys.stderr)
+                    full_response += text
+
+                # Clear the streamed output
+                if sys.stderr.isatty():
+                    # Count lines to move up
+                    num_lines = full_response.count('\n')
+                    # Move up num_lines, then clear to end of screen (\033[J)
+                    # \033[2K clears the current line, \033[1G moves to column 1
+                    if num_lines > 0:
+                        print(f"\033[{num_lines}A", end="", file=sys.stderr)
+                    print("\r\033[J", end="", file=sys.stderr, flush=True)
                 else:
-                    print(text, end="", flush=True, file=sys.stderr)
-                full_response += text
-            
-            # Clear the streamed output
-            if sys.stderr.isatty():
-                # Count lines to move up
-                num_lines = full_response.count('\n')
-                # Move up num_lines, then clear to end of screen (\033[J)
-                # \033[2K clears the current line, \033[1G moves to column 1
-                if num_lines > 0:
-                    print(f"\033[{num_lines}A", end="", file=sys.stderr)
-                print("\r\033[J", end="", file=sys.stderr, flush=True)
-            else:
-                # If not a TTY, just print a newline to separate
-                print("", file=sys.stderr)
-            
-            cmd = re.sub(r'^```\w*\n?|```$', '', full_response).strip()
+                    # If not a TTY, just print a newline to separate
+                    print("", file=sys.stderr)
+
+                cmd = re.sub(r'^```\w*\n?|```$', '', full_response).strip()
+                if not cmd:
+                    print("No command generated", file=sys.stderr)
+                    sys.exit(1)
+                print(cmd)
+        else:
+            # Non-streaming mode
+            response = client.messages.create(
+                model=os.environ.get("AUTOCMD_MODEL", DEFAULT_MODEL),
+                max_tokens=200,
+                messages=[{"role": "user", "content": f"{prompt}\n\nRequest: {' '.join(sys.argv[1:])}"}]
+            )
+            cmd = re.sub(r'^```\w*\n?|```$', '', response.content[0].text).strip()
             if not cmd:
                 print("No command generated", file=sys.stderr)
                 sys.exit(1)
