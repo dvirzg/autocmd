@@ -96,6 +96,10 @@ def reset_autocmd() -> None:
             print("Reset complete.", file=sys.stderr)
 
 def main() -> None:
+    # Force unbuffered stderr
+    if sys.stderr:
+        sys.stderr.reconfigure(write_through=True) if hasattr(sys.stderr, 'reconfigure') else None
+
     load_dotenv()
 
     if len(sys.argv) > 1 and sys.argv[1] == "--reset":
@@ -127,7 +131,12 @@ def main() -> None:
         ) as stream:
             full_response = ""
             for text in stream.text_stream:
-                print(text, end="", flush=True, file=sys.stderr)
+                # Write directly to buffer to bypass any text wrapper buffering
+                if hasattr(sys.stderr, 'buffer'):
+                    sys.stderr.buffer.write(text.encode('utf-8'))
+                    sys.stderr.buffer.flush()
+                else:
+                    print(text, end="", flush=True, file=sys.stderr)
                 full_response += text
             
             # Clear the stderr line so the final command is clean on stdout
