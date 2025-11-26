@@ -120,16 +120,30 @@ def main() -> None:
 
     try:
         client = Anthropic(api_key=api_key)
-        response = client.messages.create(
+        with client.messages.stream(
             model=os.environ.get("AUTOCMD_MODEL", DEFAULT_MODEL),
             max_tokens=200,
             messages=[{"role": "user", "content": f"Convert to {os.environ.get('SHELL', 'bash')} command (no markdown): {' '.join(sys.argv[1:])}"}]
-        )
-        cmd = re.sub(r'^```\w*\n?|```$', '', response.content[0].text).strip()
-        if not cmd:
-            print("No command generated", file=sys.stderr)
-            sys.exit(1)
-        print(cmd)
+        ) as stream:
+            full_response = ""
+            for text in stream.text_stream:
+                print(text, end="", flush=True, file=sys.stderr)
+                full_response += text
+            
+            # Clear the stderr line so the final command is clean on stdout
+            # \r goes to start of line, \033[K clears line
+            if sys.stderr.isatty():
+                print("\r\033[K", end="", file=sys.stderr, flush=True)
+            else:
+                # If not a TTY, just print a newline
+                print("", file=sys.stderr)
+            
+            cmd = re.sub(r'^```\w*\n?|```$', '', full_response).strip()
+            if not cmd:
+                print("No command generated", file=sys.stderr)
+                sys.exit(1)
+            print(cmd)
+
     except KeyboardInterrupt:
         print("\nCancelled", file=sys.stderr)
         sys.exit(130)
