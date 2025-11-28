@@ -2,10 +2,9 @@
 import sys, os, re, getpass, shutil
 from pathlib import Path
 from typing import Optional, Tuple
-from anthropic import Anthropic
 from dotenv import load_dotenv
+from .llm_providers import get_provider, PROVIDERS
 
-DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 
 def get_config_dir() -> Path:
     return Path.home() / ".config" / "autocmd"
@@ -91,37 +90,124 @@ def setup_shell_integration() -> bool:
     (get_config_dir() / ".shell_setup_done").touch()
     return True
 
-def get_api_key() -> str:
-    if key := os.environ.get("ANTHROPIC_API_KEY"):
-        return key
+def get_provider_name() -> str:
+    """Get the provider name from environment or settings."""
+    return os.environ.get("AUTOCMD_PROVIDER") or get_setting("provider", "anthropic")
 
-    config_path = get_config_dir() / "config"
-    if config_path.exists():
-        return config_path.read_text().strip()
+def onboarding() -> None:
+    """Interactive onboarding to configure provider, API key, and model."""
+    print("\nLet's configure your LLM provider.", file=sys.stderr)
+    print("", file=sys.stderr)
 
-    print("Anthropic API key: ", end='', file=sys.stderr, flush=True)
-    key = getpass.getpass("").strip()
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(key)
-    return key
+    # Provider selection
+    print(f"Available providers: {', '.join(PROVIDERS.keys())}", file=sys.stderr)
+    print("Choose a provider (default: anthropic): ", end='', file=sys.stderr, flush=True)
+    provider = input().strip().lower() or "anthropic"
+
+    while provider not in PROVIDERS:
+        print(f"Unknown provider '{provider}'. Please choose from: {', '.join(PROVIDERS.keys())}", file=sys.stderr)
+        print("Choose a provider: ", end='', file=sys.stderr, flush=True)
+        provider = input().strip().lower()
+
+    set_setting("provider", provider)
+    print(f"Provider set to {provider}.", file=sys.stderr)
+    print("", file=sys.stderr)
+
+    # API Key
+    env_var = PROVIDERS[provider].env_var_name()
+    print(f"Enter your {provider.capitalize()} API key (will be stored in {get_settings_file()}):", file=sys.stderr)
+    print(f"Alternatively, you can set the {env_var} environment variable.", file=sys.stderr)
+    print("API key: ", end='', file=sys.stderr, flush=True)
+    api_key = getpass.getpass("").strip()
+
+    if api_key:
+        set_setting("api_key", api_key)
+        print("API key saved.", file=sys.stderr)
+    else:
+        print(f"No API key entered. You'll need to set {env_var} environment variable.", file=sys.stderr)
+
+    print("", file=sys.stderr)
+
+    # Model (optional)
+    default_model = PROVIDERS[provider]("dummy").default_model()
+    print(f"Default model for {provider}: {default_model}", file=sys.stderr)
+    print("Enter a different model name or press Enter to use default: ", end='', file=sys.stderr, flush=True)
+    model = input().strip()
+
+    if model:
+        set_setting("model", model)
+        print(f"Model set to {model}.", file=sys.stderr)
+    else:
+        print(f"Using default model: {default_model}", file=sys.stderr)
+
+    print("", file=sys.stderr)
 
 def manage_settings() -> None:
     print("autocmd settings:", file=sys.stderr)
     print("", file=sys.stderr)
 
+    # Provider setting
+    current_provider = get_setting("provider", "anthropic")
+    print(f"Current provider: {current_provider}", file=sys.stderr)
+    print(f"Available providers: {', '.join(PROVIDERS.keys())}", file=sys.stderr)
+    print("Change provider? (Enter provider name or press Enter to skip): ", end='', file=sys.stderr, flush=True)
+    choice = input().strip().lower()
+    if choice and choice in PROVIDERS:
+        set_setting("provider", choice)
+        current_provider = choice
+        print(f"Provider set to {choice}.", file=sys.stderr)
+    elif choice:
+        print(f"Unknown provider '{choice}'. No changes made.", file=sys.stderr)
+
+    print("", file=sys.stderr)
+
+    # API Key setting
+    env_var = PROVIDERS[current_provider].env_var_name()
+    print(f"API key is read from {env_var} environment variable or settings file.", file=sys.stderr)
+    print("Update API key? (y/n): ", end='', file=sys.stderr, flush=True)
+    choice = input().strip().lower()
+    while choice not in ['y', 'n']:
+        print("Please enter 'y' or 'n': ", end='', file=sys.stderr, flush=True)
+        choice = input().strip().lower()
+
+    if choice == 'y':
+        print(f"Enter API key for {current_provider}: ", end='', file=sys.stderr, flush=True)
+        api_key = getpass.getpass("").strip()
+        if api_key:
+            set_setting("api_key", api_key)
+            print("API key saved.", file=sys.stderr)
+        else:
+            print("No API key entered.", file=sys.stderr)
+
+    print("", file=sys.stderr)
+
+    # Model setting
+    current_model = get_setting("model", "")
+    default_model = PROVIDERS[current_provider]("dummy").default_model()
+    print(f"Current model: {current_model or f'{default_model} (default)'}", file=sys.stderr)
+    print("Change model? (Enter model name or press Enter to skip): ", end='', file=sys.stderr, flush=True)
+    choice = input().strip()
+    if choice:
+        set_setting("model", choice)
+        print(f"Model set to {choice}.", file=sys.stderr)
+
+    print("", file=sys.stderr)
+
     # Streaming setting
     current_streaming = get_setting("streaming", "true")
-    print(f"Streaming: {current_streaming}", file=sys.stderr)
+    print(f"Current streaming: {current_streaming}", file=sys.stderr)
     print("Enable streaming output? (y/n): ", end='', file=sys.stderr, flush=True)
     choice = input().strip().lower()
+    while choice not in ['y', 'n']:
+        print("Please enter 'y' or 'n': ", end='', file=sys.stderr, flush=True)
+        choice = input().strip().lower()
+
     if choice == 'y':
         set_setting("streaming", "true")
         print("Streaming enabled.", file=sys.stderr)
-    elif choice == 'n':
+    else:
         set_setting("streaming", "false")
         print("Streaming disabled.", file=sys.stderr)
-    else:
-        print("No changes made.", file=sys.stderr)
 
 def reset_autocmd() -> None:
     config_dir = get_config_dir()
@@ -166,67 +252,61 @@ def main() -> None:
     if not is_shell_setup():
         print("Welcome to autocmd! The text-to-command assistant.", file=sys.stderr)
         setup_shell_integration()
-        get_api_key()
+        onboarding()
         shell_type, rc_file = detect_shell()
         if rc_file:
-            print(f"Setup complete! Reload your shell to activate:", file=sys.stderr)
+            print("Setup complete! Reload your shell to activate:", file=sys.stderr)
             print(f"  source {rc_file}", file=sys.stderr)
         sys.exit(0)
-
-    api_key = get_api_key()
 
     if len(sys.argv) < 2:
         print('autocmd: The text-to-command assistant', file=sys.stderr)
         sys.exit(1)
 
     streaming_enabled = get_setting("streaming", "true") == "true"
+    provider_name = get_provider_name()
 
     try:
-        client = Anthropic(api_key=api_key)
-        prompt = f"You are a command-line assistant. Convert the user's request to a single {os.environ.get('SHELL', 'bash')} command. Output ONLY the command, nothing else - no explanations, no markdown, no options, no alternatives. Just the one best command."
+        # Get API key from settings if not in environment
+        api_key = None
+        if provider_name in PROVIDERS:
+            env_var = PROVIDERS[provider_name].env_var_name()
+            if not os.environ.get(env_var):
+                api_key = get_setting("api_key")
+
+        # Get model from settings or environment
+        model = os.environ.get("AUTOCMD_MODEL") or get_setting("model") or None
+
+        provider = get_provider(provider_name=provider_name, api_key=api_key, model=model)
+        prompt = f"You are a command-line assistant. Convert the user's request to a single {os.environ.get('SHELL', 'bash')} command. Output ONLY the command, nothing else - no explanations, no markdown, no options, no alternatives. Just the one best command.\n\nRequest: {' '.join(sys.argv[1:])}"
 
         if streaming_enabled:
-            with client.messages.stream(
-                model=os.environ.get("AUTOCMD_MODEL", DEFAULT_MODEL),
-                max_tokens=200,
-                messages=[{"role": "user", "content": f"{prompt}\n\nRequest: {' '.join(sys.argv[1:])}"}]
-            ) as stream:
-                full_response = ""
-                for text in stream.text_stream:
-                    # Write directly to buffer to bypass any text wrapper buffering
-                    if hasattr(sys.stderr, 'buffer'):
-                        sys.stderr.buffer.write(text.encode('utf-8'))
-                        sys.stderr.buffer.flush()
-                    else:
-                        print(text, end="", flush=True, file=sys.stderr)
-                    full_response += text
-
-                # Clear the streamed output
-                if sys.stderr.isatty():
-                    # Count lines to move up
-                    num_lines = full_response.count('\n')
-                    # Move up num_lines, then clear to end of screen (\033[J)
-                    # \033[2K clears the current line, \033[1G moves to column 1
-                    if num_lines > 0:
-                        print(f"\033[{num_lines}A", end="", file=sys.stderr)
-                    print("\r\033[J", end="", file=sys.stderr, flush=True)
+            full_response = ""
+            for text in provider.generate_stream(prompt, max_tokens=200):
+                if hasattr(sys.stderr, 'buffer'):
+                    sys.stderr.buffer.write(text.encode('utf-8'))
+                    sys.stderr.buffer.flush()
                 else:
-                    # If not a TTY, just print a newline to separate
-                    print("", file=sys.stderr)
+                    print(text, end="", flush=True, file=sys.stderr)
+                full_response += text
 
-                cmd = re.sub(r'^```\w*\n?|```$', '', full_response).strip()
-                if not cmd:
-                    print("No command generated", file=sys.stderr)
-                    sys.exit(1)
-                print(cmd)
+            # Clear the streamed output
+            if sys.stderr.isatty():
+                num_lines = full_response.count('\n')
+                if num_lines > 0:
+                    print(f"\033[{num_lines}A", end="", file=sys.stderr)
+                print("\r\033[J", end="", file=sys.stderr, flush=True)
+            else:
+                print("", file=sys.stderr)
+
+            cmd = re.sub(r'^```\w*\n?|```$', '', full_response).strip()
+            if not cmd:
+                print("No command generated", file=sys.stderr)
+                sys.exit(1)
+            print(cmd)
         else:
-            # Non-streaming mode
-            response = client.messages.create(
-                model=os.environ.get("AUTOCMD_MODEL", DEFAULT_MODEL),
-                max_tokens=200,
-                messages=[{"role": "user", "content": f"{prompt}\n\nRequest: {' '.join(sys.argv[1:])}"}]
-            )
-            cmd = re.sub(r'^```\w*\n?|```$', '', response.content[0].text).strip()
+            response = provider.generate(prompt, max_tokens=200)
+            cmd = re.sub(r'^```\w*\n?|```$', '', response).strip()
             if not cmd:
                 print("No command generated", file=sys.stderr)
                 sys.exit(1)
@@ -235,13 +315,21 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nCancelled", file=sys.stderr)
         sys.exit(130)
+    except ValueError as e:
+        error_msg = str(e)
+        if "API key not found" in error_msg:
+            print(f"Error: {e}", file=sys.stderr)
+            print(f"Configure with: autocmd --settings", file=sys.stderr)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
     except OSError as e:
         print(f"Error: File system error - {e}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
         error_msg = str(e)
-        if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
-            print(f"Error: Invalid API key. Run 'autocmd --reset' to reconfigure.", file=sys.stderr)
+        if "api_key" in error_msg.lower() or "authentication" in error_msg.lower() or "unauthorized" in error_msg.lower():
+            print(f"Error: Invalid API key. Run 'autocmd --settings' to reconfigure.", file=sys.stderr)
         elif "rate" in error_msg.lower() or "quota" in error_msg.lower():
             print(f"Error: API rate limit or quota exceeded. Please try again later.", file=sys.stderr)
         elif "network" in error_msg.lower() or "connection" in error_msg.lower():
