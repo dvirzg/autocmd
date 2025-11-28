@@ -71,7 +71,38 @@ class AnthropicProvider(LLMProvider):
                 yield text
 
 
-class OpenAIProvider(LLMProvider):
+class OpenAICompatibleProvider(LLMProvider):
+    """Generic provider for OpenAI-compatible APIs."""
+
+    def __init__(self, api_key: str, model: Optional[str] = None, base_url: Optional[str] = None):
+        self.base_url = base_url
+        super().__init__(api_key, model)
+
+    def generate(self, prompt: str, max_tokens: int = 200) -> str:
+        from openai import OpenAI
+        client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        response = client.chat.completions.create(
+            model=self.model,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content
+
+    def generate_stream(self, prompt: str, max_tokens: int = 200) -> Iterator[str]:
+        from openai import OpenAI
+        client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        stream = client.chat.completions.create(
+            model=self.model,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+            stream=True
+        )
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
+
+class OpenAIProvider(OpenAICompatibleProvider):
     """OpenAI GPT provider."""
 
     def default_model(self) -> str:
@@ -81,32 +112,12 @@ class OpenAIProvider(LLMProvider):
     def env_var_name(cls) -> str:
         return "OPENAI_API_KEY"
 
-    def generate(self, prompt: str, max_tokens: int = 200) -> str:
-        from openai import OpenAI
-        client = OpenAI(api_key=self.api_key)
-        response = client.chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content
 
-    def generate_stream(self, prompt: str, max_tokens: int = 200) -> Iterator[str]:
-        from openai import OpenAI
-        client = OpenAI(api_key=self.api_key)
-        stream = client.chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}],
-            stream=True
-        )
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+class GroqProvider(OpenAICompatibleProvider):
+    """Groq provider."""
 
-
-class GroqProvider(LLMProvider):
-    """Groq provider (OpenAI-compatible API)."""
+    def __init__(self, api_key: str, model: Optional[str] = None):
+        super().__init__(api_key, model, base_url="https://api.groq.com/openai/v1")
 
     def default_model(self) -> str:
         return "llama-3.3-70b-versatile"
@@ -115,38 +126,12 @@ class GroqProvider(LLMProvider):
     def env_var_name(cls) -> str:
         return "GROQ_API_KEY"
 
-    def generate(self, prompt: str, max_tokens: int = 200) -> str:
-        from openai import OpenAI
-        client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://api.groq.com/openai/v1"
-        )
-        response = client.chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content
 
-    def generate_stream(self, prompt: str, max_tokens: int = 200) -> Iterator[str]:
-        from openai import OpenAI
-        client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://api.groq.com/openai/v1"
-        )
-        stream = client.chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}],
-            stream=True
-        )
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+class GrokProvider(OpenAICompatibleProvider):
+    """xAI Grok provider."""
 
-
-class GrokProvider(LLMProvider):
-    """xAI Grok provider (OpenAI-compatible API)."""
+    def __init__(self, api_key: str, model: Optional[str] = None):
+        super().__init__(api_key, model, base_url="https://api.x.ai/v1")
 
     def default_model(self) -> str:
         return "grok-beta"
@@ -155,38 +140,12 @@ class GrokProvider(LLMProvider):
     def env_var_name(cls) -> str:
         return "XAI_API_KEY"
 
-    def generate(self, prompt: str, max_tokens: int = 200) -> str:
-        from openai import OpenAI
-        client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://api.x.ai/v1"
-        )
-        response = client.chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content
 
-    def generate_stream(self, prompt: str, max_tokens: int = 200) -> Iterator[str]:
-        from openai import OpenAI
-        client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://api.x.ai/v1"
-        )
-        stream = client.chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}],
-            stream=True
-        )
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+class DeepseekProvider(OpenAICompatibleProvider):
+    """Deepseek provider."""
 
-
-class DeepseekProvider(LLMProvider):
-    """Deepseek provider (OpenAI-compatible API)."""
+    def __init__(self, api_key: str, model: Optional[str] = None):
+        super().__init__(api_key, model, base_url="https://api.deepseek.com")
 
     def default_model(self) -> str:
         return "deepseek-chat"
@@ -195,38 +154,12 @@ class DeepseekProvider(LLMProvider):
     def env_var_name(cls) -> str:
         return "DEEPSEEK_API_KEY"
 
-    def generate(self, prompt: str, max_tokens: int = 200) -> str:
-        from openai import OpenAI
-        client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://api.deepseek.com"
-        )
-        response = client.chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content
 
-    def generate_stream(self, prompt: str, max_tokens: int = 200) -> Iterator[str]:
-        from openai import OpenAI
-        client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://api.deepseek.com"
-        )
-        stream = client.chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}],
-            stream=True
-        )
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+class OpenrouterProvider(OpenAICompatibleProvider):
+    """Openrouter provider."""
 
-
-class OpenrouterProvider(LLMProvider):
-    """Openrouter provider (OpenAI-compatible API)."""
+    def __init__(self, api_key: str, model: Optional[str] = None):
+        super().__init__(api_key, model, base_url="https://openrouter.ai/api/v1")
 
     def default_model(self) -> str:
         return "anthropic/claude-3.5-sonnet"
@@ -234,35 +167,6 @@ class OpenrouterProvider(LLMProvider):
     @classmethod
     def env_var_name(cls) -> str:
         return "OPENROUTER_API_KEY"
-
-    def generate(self, prompt: str, max_tokens: int = 200) -> str:
-        from openai import OpenAI
-        client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://openrouter.ai/api/v1"
-        )
-        response = client.chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content
-
-    def generate_stream(self, prompt: str, max_tokens: int = 200) -> Iterator[str]:
-        from openai import OpenAI
-        client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://openrouter.ai/api/v1"
-        )
-        stream = client.chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}],
-            stream=True
-        )
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
 
 
 # Registry of all available providers
