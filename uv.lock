@@ -100,7 +100,7 @@ wheels = [
 
 [[package]]
 name = "autocmd-cli"
-version = "0.1.7"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic", version = "0.72.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
