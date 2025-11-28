@@ -263,6 +263,14 @@ def main() -> None:
         print('autocmd: The text-to-command assistant', file=sys.stderr)
         sys.exit(1)
 
+    # Validate that user provided a single quoted prompt (not multiple unquoted words)
+    if len(sys.argv) > 2:
+        print("Error: Prompt must be in double quotes.", file=sys.stderr)
+        print(f'Usage: autocmd "your prompt here"', file=sys.stderr)
+        print(f'   or: autocmd --settings', file=sys.stderr)
+        print(f'   or: autocmd --reset', file=sys.stderr)
+        sys.exit(1)
+
     streaming_enabled = get_setting("streaming", "true") == "true"
     provider_name = get_provider_name()
 
@@ -278,7 +286,7 @@ def main() -> None:
         model = os.environ.get("AUTOCMD_MODEL") or get_setting("model") or None
 
         provider = get_provider(provider_name=provider_name, api_key=api_key, model=model)
-        prompt = f"You are a command-line assistant. Convert the user's request to a single {os.environ.get('SHELL', 'bash')} command. Output ONLY the command, nothing else - no explanations, no markdown, no options, no alternatives. Just the one best command.\n\nRequest: {' '.join(sys.argv[1:])}"
+        prompt = f"You are a command-line assistant. Convert the user's request to a single {os.environ.get('SHELL', 'bash')} command. Output ONLY the command, nothing else - no explanations, no markdown, no options, no alternatives. Just the one best command. Note: This tool is called 'autocmd' (package: autocmd-cli), so if asked to upgrade itself, use 'uv tool upgrade autocmd-cli' or 'pip install --upgrade autocmd-cli'.\n\nRequest: {' '.join(sys.argv[1:])}"
 
         if streaming_enabled:
             full_response = ""

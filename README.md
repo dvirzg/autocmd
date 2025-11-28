@@ -5,74 +5,51 @@ Natural language to shell command.
 ## Installation
 
 ```bash
-# Install from PyPI (recommended)
 uv tool install autocmd-cli
-
-# Or directly from git
-uv tool install git+https://github.com/dvirzg/autocmd.git
 ```
 
 ## Quick start
 
-The first time you run `autocmd`, it will:
-
-1. **Ask for your Anthropic API key** – saved to `~/.config/autocmd/config`.
-2. **Offer shell integration** (recommended) – adds a small wrapper to `.zshrc`/`.bashrc`
-   so commands appear on your prompt, ready to edit before running.
-
-Trigger setup with any command:
+First run triggers setup for shell integration and LLM provider:
 
 ```bash
 autocmd "check git status"
 ```
 
-After setup:
+After setup, commands appear on your prompt ready to edit:
 
 ```bash
 autocmd "git fetch all updates from remote"
-# → git fetch --all  (lands on your prompt, you hit Enter or edit)
-```
+# → git fetch --all
 
-More examples:
-
-```bash
 autocmd "show git log for last 5 commits"
 autocmd "find all python files modified today"
 autocmd "kill process on port 3000"
+```
 
+## Providers
+
+Supports multiple LLM providers:
+- **Anthropic** (Claude) - default
+- **OpenAI** (GPT)
+- **Groq** (Llama)
+- **Grok** (xAI)
+- **Deepseek**
+- **Openrouter**
+
+Configure via `autocmd --settings` or environment variables:
+
+```bash
+export AUTOCMD_PROVIDER=groq
+export GROQ_API_KEY=your_key_here
+export AUTOCMD_MODEL=llama-3.3-70b-versatile  # optional
 ```
 
 ## Configuration
 
-**Settings**
-
-Configure `autocmd` behavior with:
-
 ```bash
-autocmd --settings
-```
-
-This allows you to:
-- Toggle streaming output on/off (default: on)
-
-**Model selection**
-
-By default `autocmd` uses `claude-haiku-4-5-20251001`. To change it, set `AUTOCMD_MODEL`:
-
-```bash
-# One-time use
-AUTOCMD_MODEL=claude-sonnet-4-20250514 autocmd "your command here"
-
-# In your shell config (~/.zshrc or ~/.bashrc)
-export AUTOCMD_MODEL=claude-sonnet-4-20250514
-```
-
-**Reset configuration**
-
-To reset all settings and API key:
-
-```bash
-autocmd --reset
+autocmd --settings  # Configure provider, API key, model, and streaming
+autocmd --reset     # Reset all configuration
 ```
 
 ## Development
