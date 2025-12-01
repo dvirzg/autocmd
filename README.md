@@ -2,7 +2,7 @@
 
 Natural language to shell command.
 
-![Demo](./autocmd-demo.mp4)
+![Demo](./autocmd-demo.gif)
 
 ## Installation
 
