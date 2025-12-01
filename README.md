@@ -2,6 +2,8 @@
 
 Natural language to shell command.
 
+![Demo](./autocmd-demo.mp4)
+
 ## Installation
 
 ```bash
