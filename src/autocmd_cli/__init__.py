@@ -74,9 +74,25 @@ def setup_shell_integration() -> bool:
     autocmd_cmd = shutil.which("autocmd") or "uv tool run --from autocmd-cli autocmd"
 
     if shell_type == "zsh":
-        wrapper = f'\n# autocmd\nautocmd() {{ local cmd=$({autocmd_cmd} "$@"); [ -n "$cmd" ] && print -z "$cmd"; }}\n'
+        wrapper = f'''
+# autocmd
+autocmd() {{
+    # Handle triple quotes by preserving them as literal strings
+    local args="$*"
+    local cmd=$({autocmd_cmd} "$args")
+    [ -n "$cmd" ] && print -z "$cmd"
+}}
+'''
     else:
-        wrapper = f'\n# autocmd\nautocmd() {{ local cmd=$({autocmd_cmd} "$@"); [ -n "$cmd" ] && {{ READLINE_LINE="$cmd"; READLINE_POINT=${{#READLINE_LINE}}; }}; }}\n'
+        wrapper = f'''
+# autocmd
+autocmd() {{
+    # Handle triple quotes by preserving them as literal strings
+    local args="$*"
+    local cmd=$({autocmd_cmd} "$args")
+    [ -n "$cmd" ] && {{ READLINE_LINE="$cmd"; READLINE_POINT=${{#READLINE_LINE}}; }}
+}}
+'''
 
     if rc_file.exists() and "# autocmd" in rc_file.read_text():
         get_config_dir().mkdir(parents=True, exist_ok=True)
@@ -263,13 +279,30 @@ def main() -> None:
         print('autocmd: The text-to-command assistant', file=sys.stderr)
         sys.exit(1)
 
-    # Validate that user provided a single quoted prompt (not multiple unquoted words)
-    if len(sys.argv) > 2:
-        print("Error: Prompt must be in double quotes.", file=sys.stderr)
-        print(f'Usage: autocmd "your prompt here"', file=sys.stderr)
-        print(f'   or: autocmd --settings', file=sys.stderr)
-        print(f'   or: autocmd --reset', file=sys.stderr)
-        sys.exit(1)
+    # Parse arguments - support both single quoted and triple-quoted strings
+    user_input = ' '.join(sys.argv[1:])
+
+    # Check if using triple quotes
+    if '"""' in user_input:
+        # Extract content between triple quotes
+        parts = user_input.split('"""')
+        if len(parts) >= 3:
+            # Content is between first and second triple quotes
+            user_prompt = parts[1]
+        else:
+            print("Error: Mismatched triple quotes.", file=sys.stderr)
+            print('Usage: autocmd """your multiline prompt here"""', file=sys.stderr)
+            sys.exit(1)
+    else:
+        # Validate that user provided a single quoted prompt (not multiple unquoted words)
+        if len(sys.argv) > 2:
+            print("Error: Prompt must be in double quotes.", file=sys.stderr)
+            print(f'Usage: autocmd "your prompt here"', file=sys.stderr)
+            print(f'   or: autocmd """your multiline prompt here"""', file=sys.stderr)
+            print(f'   or: autocmd --settings', file=sys.stderr)
+            print(f'   or: autocmd --reset', file=sys.stderr)
+            sys.exit(1)
+        user_prompt = sys.argv[1]
 
     streaming_enabled = get_setting("streaming", "true") == "true"
     provider_name = get_provider_name()
@@ -286,7 +319,7 @@ def main() -> None:
         model = os.environ.get("AUTOCMD_MODEL") or get_setting("model") or None
 
         provider = get_provider(provider_name=provider_name, api_key=api_key, model=model)
-        prompt = f"You are a command-line assistant. Convert the user's request to a single {os.environ.get('SHELL', 'bash')} command. Output ONLY the command, nothing else - no explanations, no markdown, no options, no alternatives. Just the one best command. Note: This tool is called 'autocmd' (package: autocmd-cli), so if asked to upgrade itself, use 'uv tool upgrade autocmd-cli' or 'pip install --upgrade autocmd-cli'.\n\nRequest: {' '.join(sys.argv[1:])}"
+        prompt = f"You are a command-line assistant. Convert the user's request to a single {os.environ.get('SHELL', 'bash')} command. Output ONLY the command, nothing else - no explanations, no markdown, no options, no alternatives. Just the one best command. Note: This tool is called 'autocmd' (package: autocmd-cli), so if asked to upgrade itself, use 'uv tool upgrade autocmd-cli' or 'pip install --upgrade autocmd-cli'.\n\nRequest: {user_prompt}"
 
         if streaming_enabled:
             full_response = ""

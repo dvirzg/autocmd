@@ -29,6 +29,18 @@ autocmd "find all python files modified today"
 autocmd "kill process on port 3000"
 ```
 
+### Multiline prompts
+
+Use triple quotes for multiline prompts or prompts with quotes:
+
+```bash
+autocmd '"""find all log files
+that contain "ERROR"
+modified in the last hour"""'
+
+autocmd '"""search for files with 'important' in the name"""'
+```
+
 ## Providers
 
 Supports multiple LLM providers:
